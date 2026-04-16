@@ -1,0 +1,83 @@
+
+#[impl(Show)]
+pub enum* TreeError {
+  InconsistentArgumentsStructure(),
+}
+
+#[impl(Eq)]
+#[impl(Show)]
+pub enum* Tree[T] {
+  Leaf(T),
+  Node(Tree[T], Tree[T]),
+}
+
+#[impl(Eq)]
+pub struct* Storage[T](N32, Tree[T]);
+
+fn genTree(h: N32) -> Tree[N32] {
+  if h == 1 {
+    Tree::Leaf(2)
+  } else {
+    Tree::Node(genTree(h - 1), genTree(h - 1))
+  }
+}
+
+pub fn .map[T, U, F*; fn F(T) -> U](tree: Tree[T], f: F) -> Tree[U] {
+  match (tree) {
+    (Tree::Leaf(x)) { Tree::Leaf(f(x)) }
+    (Tree::Node(left, right)) { Tree::Node(left.map(f), right.map(f)) }
+  }
+}
+
+pub fn .reduce[T, F*; fn F(T, T) -> T](tree: Tree[T], f: F) -> T {
+  match (tree) {
+    (Tree::Leaf(x)) { x }
+    (Tree::Node(left, right)) { f(left.reduce(f), right.reduce(f)) }
+  }
+}
+
+fn .map2[T?, U?, R?, F*; fn F(T, U) -> R](tree1: Tree[T], tree2: Tree[U], f: F) -> Result[
+  Tree[R], TreeError;
+] {
+  match (tree1, tree2) {
+    (Tree::Leaf(v1), Tree::Leaf(v2)) { Result::Ok(Tree::Leaf(f(v1, v2))) }
+    (Tree::Node(l1, r1), Tree::Node(l2, r2)) {
+      let left = l1.map2(l2, f);
+      let right = r1.map2(r2, f);
+      match (left, right) {
+        (Result::Ok(t1), Result::Ok(t2)) { Result::Ok(Tree::Node(t1, t2)) }
+        _ { Result::Err(TreeError::InconsistentArgumentsStructure()) }
+      }
+    }
+    _ { Result::Err(TreeError::InconsistentArgumentsStructure()) }
+  }
+}
+
+pub fn main(&io: &IO) {
+  let tree1 = genTree(5);
+  let tree2 = genTree(5);
+  //let comp_tree = tree1 == tree2;
+  //io.println("Compare tree result: {comp_tree}");
+  //let storage1 = Storage(1, tree1);
+  //let storage2 = Storage(1, tree2);
+  //let comp_storage = storage1 == storage2;
+  //io.println("Result: {comp_storage}");
+  //let res_map = tree1.map(fn* (val: N32) { val * 2 });
+  //let res = res_map.reduce(fn* (x: N32, y: N32) { x + y });
+  //io.println("Result: {res}");
+  let res_map2 = tree1.map2(tree2, fn* (x: N32, y: N32) -> N32 { x + y });
+  match res_map2 {
+    (Result::Ok(t)) { io.println("Map2 result: {t.show()}") }
+    (Result::Err(e)) { io.println("Map2 failed: {e.show()}") }
+  }
+  //io.println("Result: {res}");
+  //let storage1 : Storage[N32]= Storage(1,[])
+  //let storage2 : Storage[N32] = Storage(2,[])
+  //let comp_storage = storage1 == storage2
+  //io.println("Result: {comp_storage}");
+
+  //let storage1 = Storage(1,[tree1])
+  //let storage2 = Storage(2,[tree1])
+  //let comp_storage = storage1 == storage2
+  //io.println("Result: {comp_storage}");
+}
